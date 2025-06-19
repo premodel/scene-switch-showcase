@@ -1,96 +1,82 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-
-interface SceneData {
-  id: string;
-  name: string;
-  versions: {
-    id: string;
-    name: string;
-    imageUrl: string;
-  }[];
-}
-
-const sceneData: SceneData[] = [
-  {
-    id: 'master-bedroom',
-    name: 'Master Bedroom',
-    versions: [
-      {
-        id: 'opt-a',
-        name: 'Opt A',
-        imageUrl: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop'
-      },
-      {
-        id: 'opt-b',
-        name: 'Opt B',
-        imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=600&fit=crop'
-      },
-      {
-        id: 'opt-c',
-        name: 'Opt C',
-        imageUrl: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop'
-      }
-    ]
-  },
-  {
-    id: 'northeast-bedroom',
-    name: 'Northeast Bedroom',
-    versions: [
-      {
-        id: 'opt-a',
-        name: 'Opt A',
-        imageUrl: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=600&fit=crop'
-      },
-      {
-        id: 'opt-b',
-        name: 'Opt B',
-        imageUrl: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&h=600&fit=crop'
-      },
-      {
-        id: 'opt-c',
-        name: 'Opt C',
-        imageUrl: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=600&fit=crop'
-      }
-    ]
-  },
-  {
-    id: 'southeast-bedroom',
-    name: 'Southeast Bedroom',
-    versions: [
-      {
-        id: 'opt-a',
-        name: 'Opt A',
-        imageUrl: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop'
-      },
-      {
-        id: 'opt-b',
-        name: 'Opt B',
-        imageUrl: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=800&h=600&fit=crop'
-      },
-      {
-        id: 'opt-c',
-        name: 'Opt C',
-        imageUrl: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=600&fit=crop'
-      }
-    ]
-  }
-];
+import { fetchGoogleDriveFiles, getImageUrl } from '../services/googleDriveService';
+import { parseFileName, groupScenesAndVersions, SceneData, ParsedScene } from '../utils/sceneParser';
 
 const ImageWidget = () => {
+  const [searchParams] = useSearchParams();
+  const [sceneData, setSceneData] = useState<SceneData[]>([]);
   const [selectedSceneIndex, setSelectedSceneIndex] = useState(0);
   const [selectedVersionIndex, setSelectedVersionIndex] = useState(0);
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const currentScene = sceneData[selectedSceneIndex];
-  const currentImage = currentScene.versions[selectedVersionIndex];
+  const folderId = searchParams.get('folderId');
+
+  useEffect(() => {
+    const loadImagesFromDrive = async () => {
+      if (!folderId) {
+        setError('No Google Drive folder ID provided. Add ?folderId=YOUR_FOLDER_ID to the URL');
+        setIsDataLoading(false);
+        return;
+      }
+
+      try {
+        setIsDataLoading(true);
+        setError(null);
+        
+        console.log('Fetching files from Google Drive folder:', folderId);
+        const files = await fetchGoogleDriveFiles(folderId);
+        console.log('Retrieved files:', files);
+        
+        // Filter for image files and parse them
+        const imageFiles = files.filter(file => 
+          /\.(png|jpg|jpeg|webp)$/i.test(file.name)
+        );
+        
+        const parsedFiles: ParsedScene[] = imageFiles
+          .map(file => {
+            const parsed = parseFileName(file.name);
+            if (parsed) {
+              parsed.imageUrl = getImageUrl(file);
+            }
+            return parsed;
+          })
+          .filter((file): file is ParsedScene => file !== null);
+        
+        console.log('Parsed files:', parsedFiles);
+        
+        if (parsedFiles.length === 0) {
+          setError('No valid image files found in the specified folder. Files should be named like: scene_name-version_name.png');
+          setIsDataLoading(false);
+          return;
+        }
+        
+        const groupedData = groupScenesAndVersions(parsedFiles);
+        console.log('Grouped scene data:', groupedData);
+        
+        setSceneData(groupedData);
+        setSelectedSceneIndex(0);
+        setSelectedVersionIndex(0);
+      } catch (err) {
+        console.error('Error loading images:', err);
+        setError(`Failed to load images: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+
+    loadImagesFromDrive();
+  }, [folderId]);
 
   const handleSceneChange = (sceneIndex: number) => {
     if (sceneIndex !== selectedSceneIndex) {
       setIsImageLoading(true);
       setSelectedSceneIndex(sceneIndex);
-      setSelectedVersionIndex(0); // Reset to first version when changing scene
+      setSelectedVersionIndex(0);
     }
   };
 
@@ -104,6 +90,48 @@ const ImageWidget = () => {
   const handleImageLoad = () => {
     setIsImageLoading(false);
   };
+
+  if (isDataLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-8 text-center">
+        <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-slate-600">Loading images from Google Drive...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-8 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-red-800 font-semibold mb-2">Error Loading Images</h3>
+          <p className="text-red-600 text-sm">{error}</p>
+          {!folderId && (
+            <div className="mt-4 text-left bg-red-100 p-4 rounded text-sm">
+              <p className="font-medium mb-2">To use this component:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Get a Google Drive API key</li>
+                <li>Set VITE_GOOGLE_DRIVE_API_KEY in your environment</li>
+                <li>Make your Google Drive folder publicly accessible</li>
+                <li>Add ?folderId=YOUR_FOLDER_ID to the URL</li>
+              </ol>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (sceneData.length === 0) {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-8 text-center">
+        <p className="text-slate-600">No scenes found</p>
+      </div>
+    );
+  }
+
+  const currentScene = sceneData[selectedSceneIndex];
+  const currentImage = currentScene.versions[selectedVersionIndex];
 
   return (
     <div className="w-full max-w-4xl mx-auto">
