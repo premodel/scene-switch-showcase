@@ -12,11 +12,7 @@ interface GoogleDriveResponse {
 
 export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
   try {
-    const apiKey = import.meta.env.VITE_GOOGLE_DRIVE_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('Google Drive API key not found. Please set VITE_GOOGLE_DRIVE_API_KEY environment variable.');
-    }
+    const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
     // Using Google Drive API v3 to list files in a folder
     const response = await fetch(
