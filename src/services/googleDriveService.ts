@@ -14,7 +14,7 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     // Using Google Drive API v3 to list files in a folder
     const response = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&fields=files(id,name,webViewLink,webContentLink)&key=${import.meta.env.VITE_GOOGLE_DRIVE_API_KEY}`
+      `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&fields=files(id,name,webViewLink,webContentLink)&key=${import.meta.env.AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ}`
     );
     
     if (!response.ok) {
