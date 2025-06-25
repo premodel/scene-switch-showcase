@@ -24,6 +24,10 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     }
     
     const data: GoogleDriveResponse = await response.json();
+    console.log('Raw Google Drive API response:', data);
+    console.log('Number of files returned:', data.files?.length || 0);
+    console.log('File names:', data.files?.map(f => f.name) || []);
+    
     return data.files || [];
   } catch (error) {
     console.error('Error fetching Google Drive files:', error);

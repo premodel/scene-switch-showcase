@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -33,15 +32,22 @@ const ImageWidget = () => {
         console.log('Retrieved files:', files);
         
         // Filter for image files and parse them
-        const imageFiles = files.filter(file => 
-          /\.(png|jpg|jpeg|webp)$/i.test(file.name)
-        );
+        const imageFiles = files.filter(file => {
+          const isImage = /\.(png|jpg|jpeg|webp)$/i.test(file.name);
+          console.log(`File "${file.name}" is image:`, isImage);
+          return isImage;
+        });
+        
+        console.log('Filtered image files:', imageFiles);
         
         const parsedFiles: ParsedScene[] = imageFiles
           .map(file => {
+            console.log(`Parsing file: ${file.name}`);
             const parsed = parseFileName(file.name);
+            console.log(`Parse result for "${file.name}":`, parsed);
             if (parsed) {
               parsed.imageUrl = getImageUrl(file);
+              console.log(`Set image URL for "${file.name}":`, parsed.imageUrl);
             }
             return parsed;
           })
@@ -50,6 +56,7 @@ const ImageWidget = () => {
         console.log('Parsed files:', parsedFiles);
         
         if (parsedFiles.length === 0) {
+          console.log('No parsed files found. Original files:', files.map(f => f.name));
           setError('No valid image files found in the specified folder. Files should be named like: scene_name-version_name.png');
           setIsDataLoading(false);
           return;
