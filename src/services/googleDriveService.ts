@@ -1,3 +1,4 @@
+
 interface GoogleDriveFile {
   id: string;
   name: string;
@@ -20,8 +21,9 @@ async function listDriveFolder(folderId: string, apiKey: string) {
   }
   
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink,resourceKey,thumbnailLink)');
-  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true`;
+  // Include resourceKey in fields and use proper field syntax
+  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink,webViewLink,resourceKey,thumbnailLink)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
   
   console.log('Making request to URL:', url);
 
@@ -68,7 +70,7 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     const transformedFiles: GoogleDriveFile[] = imageFiles.map((file: any) => ({
       id: file.id,
       name: file.name,
-      webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
+      webViewLink: file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`,
       webContentLink: file.webContentLink || `https://drive.google.com/uc?id=${file.id}`,
       mimeType: file.mimeType,
       resourceKey: file.resourceKey
@@ -94,6 +96,13 @@ export const getImageUrl = (file: GoogleDriveFile): string => {
   console.log(`Getting image URL for file: ${file.name}`);
   console.log(`  webContentLink: ${file.webContentLink}`);
   console.log(`  resourceKey: ${file.resourceKey}`);
+  
+  // For shared drive files with resourceKey, use it with webContentLink
+  if (file.resourceKey && file.webContentLink) {
+    const urlWithResourceKey = `${file.webContentLink}&resourcekey=${file.resourceKey}`;
+    console.log(`  Using URL with resourceKey: ${urlWithResourceKey}`);
+    return urlWithResourceKey;
+  }
   
   // Use webContentLink and convert from download to view for embeddable images
   if (file.webContentLink) {
