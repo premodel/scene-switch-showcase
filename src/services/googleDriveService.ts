@@ -23,8 +23,8 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
-    // Using Google Drive API v3 to list files in a folder
-    const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents&fields=files(id,name,webViewLink,webContentLink)&key=${apiKey}`;
+    // Fixed: Remove quotes around folder ID in the query
+    const url = `https://www.googleapis.com/drive/v3/files?q=${folderId}+in+parents&fields=files(id,name,webViewLink,webContentLink)&key=${apiKey}`;
     
     console.log('Making request to Google Drive API...');
     console.log('Folder ID:', folderId);
