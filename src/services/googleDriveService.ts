@@ -11,11 +11,12 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   
   const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
   
-  // Use the exact same query format as your working curl command
-  const query = `'${folderId}' in parents and trashed=false`;
+  // Build the URL exactly like the working curl command
+  // Notice: using + instead of %20 for spaces, and manual encoding
+  const query = `'${folderId}'+in+parents+and+trashed=false`;
   const fields = 'files(id,name,webViewLink,webContentLink,mimeType)';
   
-  const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&pageSize=1000&fields=${encodeURIComponent(fields)}&key=${apiKey}`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&pageSize=1000&fields=${fields}&key=${apiKey}`;
   
   console.log('API URL:', url);
   
