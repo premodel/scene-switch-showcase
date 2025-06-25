@@ -43,10 +43,15 @@ serve(async (req) => {
 
     console.log('Fetching files from Google Drive folder:', folderId)
     
-    // Fixed query syntax - properly encode the query parameter
-    const query = encodeURIComponent(`'${folderId}' in parents and trashed=false`)
-    const url = `https://www.googleapis.com/drive/v3/files?q=${query}&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`
+    // Use the correct Google Drive API endpoint with proper query formatting
+    const params = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed=false`,
+      pageSize: '1000',
+      fields: 'files(id,name,webViewLink,webContentLink,mimeType)',
+      key: apiKey
+    });
     
+    const url = `https://www.googleapis.com/drive/v3/files?${params.toString()}`
     console.log('Making request to Google Drive API with URL:', url)
     
     const response = await fetch(url, {
