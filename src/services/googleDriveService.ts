@@ -21,7 +21,7 @@ async function listDriveFolder(folderId: string, apiKey: string) {
   
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const fields = encodeURIComponent('files(id,name,mimeType,webContentLink)');
-  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true`;
   
   console.log('Making request to URL:', url);
 
