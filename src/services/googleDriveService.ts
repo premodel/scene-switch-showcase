@@ -1,4 +1,5 @@
 
+
 interface GoogleDriveFile {
   id: string;
   name: string;
@@ -8,7 +9,7 @@ interface GoogleDriveFile {
   resourceKey?: string;
 }
 
-// Minimal function: list up to 1000 public files in a folder
+// First try regular drive, then shared drive if that fails
 async function listDriveFolder(folderId: string, apiKey: string) {
   console.log('listDriveFolder called with:', { folderId, apiKeyLength: apiKey?.length });
   
@@ -21,14 +22,25 @@ async function listDriveFolder(folderId: string, apiKey: string) {
   }
   
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  // Include resourceKey in fields and use proper field syntax
   const fields = encodeURIComponent('files(id,name,mimeType,webContentLink,webViewLink,resourceKey,thumbnailLink)');
-  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
   
-  console.log('Making request to URL:', url);
-
-  const res = await fetch(url);
-  console.log('Response status:', res.status);
+  // First try regular drive folder
+  let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}`;
+  
+  console.log('Trying regular drive folder with URL:', url);
+  
+  let res = await fetch(url);
+  console.log('Regular drive response status:', res.status);
+  
+  // If regular drive fails, try shared drive
+  if (!res.ok) {
+    console.log('Regular drive failed, trying shared drive...');
+    url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
+    
+    console.log('Trying shared drive with URL:', url);
+    res = await fetch(url);
+    console.log('Shared drive response status:', res.status);
+  }
   
   if (!res.ok) {
     const errorText = await res.text();
