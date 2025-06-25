@@ -6,105 +6,76 @@ interface GoogleDriveFile {
   webContentLink: string;
 }
 
-interface GoogleDriveResponse {
-  files: GoogleDriveFile[];
-  error?: {
-    code: number;
-    message: string;
-    errors: Array<{
-      domain: string;
-      reason: string;
-      message: string;
-    }>;
-  };
-}
-
 export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
+  console.log('=== ATTEMPTING NEW APPROACH ===');
+  console.log('Folder ID:', folderId);
+  
+  // Try direct public folder access without API key first
   try {
-    const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
+    console.log('=== TRYING PUBLIC RSS FEED APPROACH ===');
+    const rssUrl = `https://drive.google.com/drive/folders/${folderId}`;
+    console.log('RSS URL:', rssUrl);
     
-    console.log('=== FETCHING FILES FROM FOLDER ===');
-    console.log('Folder ID:', folderId);
-    
-    // Try multiple query approaches
-    const queryApproaches = [
-      // Method 1: Standard parent query with quotes
-      `'${folderId}' in parents`,
-      // Method 2: Standard parent query without quotes  
-      `${folderId} in parents`,
-      // Method 3: Direct parent equality
-      `parents = '${folderId}'`
-    ];
-    
-    for (let i = 0; i < queryApproaches.length; i++) {
-      const query = queryApproaches[i];
-      console.log(`=== TRYING QUERY METHOD ${i + 1} ===`);
-      console.log('Query:', query);
-      
-      const filesUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`;
-      console.log('Request URL:', filesUrl);
-      
-      try {
-        const response = await fetch(filesUrl);
-        console.log(`Method ${i + 1} response status:`, response.status);
-        
-        if (response.ok) {
-          const data: GoogleDriveResponse = await response.json();
-          console.log(`Method ${i + 1} response:`, data);
-          
-          if (data.files && data.files.length > 0) {
-            console.log(`SUCCESS! Found ${data.files.length} files with method ${i + 1}`);
-            return data.files;
-          } else {
-            console.log(`Method ${i + 1} returned empty files array`);
-          }
-        } else {
-          const errorText = await response.text();
-          console.error(`Method ${i + 1} failed:`, response.status, errorText);
-        }
-      } catch (error) {
-        console.error(`Method ${i + 1} threw error:`, error);
-      }
-    }
-    
-    // If all specific queries failed, try listing all accessible files
-    console.log('=== FALLBACK: LISTING ALL ACCESSIBLE FILES ===');
-    const allFilesUrl = `https://www.googleapis.com/drive/v3/files?pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
-    
-    const allFilesResponse = await fetch(allFilesUrl);
-    console.log('All files response status:', allFilesResponse.status);
-    
-    if (allFilesResponse.ok) {
-      const allFilesData = await allFilesResponse.json();
-      console.log('All files count:', allFilesData.files?.length || 0);
-      
-      // Filter files that have our folder as parent
-      const filteredFiles = allFilesData.files?.filter((file: any) => 
-        file.parents && file.parents.includes(folderId)
-      ) || [];
-      
-      console.log('Filtered files for our folder:', filteredFiles.length);
-      
-      if (filteredFiles.length > 0) {
-        return filteredFiles;
-      }
-      
-      // If no files found in our folder, log all folder IDs for debugging
-      const uniqueParents = [...new Set(allFilesData.files?.flatMap((f: any) => f.parents || []) || [])];
-      console.log('All unique folder IDs found:', uniqueParents);
-      console.log('Looking for folder ID:', folderId);
-    }
-    
-    console.log('=== NO FILES FOUND WITH ANY METHOD ===');
-    return [];
-    
+    // This won't work due to CORS, but let's see what happens
+    const rssResponse = await fetch(rssUrl);
+    console.log('RSS Response status:', rssResponse.status);
   } catch (error) {
-    console.error('Error fetching Google Drive files:', error);
-    throw error;
+    console.log('RSS approach failed (expected due to CORS):', error);
   }
+  
+  // Try the API with a different approach - use the files.list endpoint directly
+  const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
+  
+  try {
+    console.log('=== TRYING SIMPLE FILES LIST ===');
+    // Just try to list files without any parent query
+    const simpleUrl = `https://www.googleapis.com/drive/v3/files?key=${apiKey}&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&pageSize=1000`;
+    console.log('Simple URL:', simpleUrl);
+    
+    const response = await fetch(simpleUrl);
+    console.log('Simple response status:', response.status);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Total files accessible:', data.files?.length || 0);
+      
+      // Log all folder IDs we can see
+      const allParents = data.files?.flatMap((f: any) => f.parents || []) || [];
+      const uniqueParents = [...new Set(allParents)];
+      console.log('All unique parent folder IDs:', uniqueParents);
+      console.log('Looking for folder ID:', folderId);
+      
+      // Check if our folder ID exists in any parent
+      const hasOurFolder = uniqueParents.includes(folderId);
+      console.log('Our folder ID found in parents:', hasOurFolder);
+      
+      if (hasOurFolder) {
+        const filesInFolder = data.files.filter((f: any) => 
+          f.parents && f.parents.includes(folderId) && 
+          f.mimeType && f.mimeType.startsWith('image/')
+        );
+        console.log('Image files in our folder:', filesInFolder.length);
+        return filesInFolder;
+      }
+    } else {
+      const errorText = await response.text();
+      console.error('Simple API call failed:', response.status, errorText);
+    }
+  } catch (error) {
+    console.error('Simple API approach failed:', error);
+  }
+  
+  // Last resort: try to access the folder differently
+  console.log('=== FOLDER ACCESS ISSUE DETECTED ===');
+  console.log('The folder might not be accessible via the API even though it\'s "public"');
+  console.log('Possible solutions:');
+  console.log('1. The folder owner needs to enable "Anyone with the link can view" AND also enable API access');
+  console.log('2. The API key needs additional permissions');
+  console.log('3. The folder ID might be incorrect');
+  
+  return [];
 };
 
 export const getImageUrl = (file: GoogleDriveFile): string => {
-  // Convert Google Drive file to direct image URL
   return `https://drive.google.com/uc?id=${file.id}`;
 };
