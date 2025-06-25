@@ -43,10 +43,10 @@ serve(async (req) => {
 
     console.log('Fetching files from Google Drive folder:', folderId)
     
-    // Build the Google Drive API URL
-    const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`
+    // Fixed query - remove quotes around folder ID and use proper syntax
+    const url = `https://www.googleapis.com/drive/v3/files?q=${folderId} in parents and trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`
     
-    console.log('Making request to Google Drive API...')
+    console.log('Making request to Google Drive API with URL:', url)
     
     const response = await fetch(url, {
       method: 'GET',
@@ -59,7 +59,7 @@ serve(async (req) => {
     
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Google Drive API error:', errorText)
+      console.error('Google Drive API error response:', errorText)
       return new Response(
         JSON.stringify({ error: `Google Drive API error: ${response.status} - ${errorText}` }),
         { 
@@ -70,6 +70,7 @@ serve(async (req) => {
     }
     
     const data = await response.json()
+    console.log('Raw API response:', JSON.stringify(data, null, 2))
     console.log('Files retrieved:', data.files?.length || 0)
     
     // Filter for image files
@@ -78,6 +79,7 @@ serve(async (req) => {
     ) || []
     
     console.log('Image files found:', imageFiles.length)
+    console.log('Image files:', imageFiles.map(f => f.name))
     
     return new Response(
       JSON.stringify({ files: imageFiles }),
