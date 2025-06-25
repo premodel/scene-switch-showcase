@@ -12,34 +12,56 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     console.log('Making request to Supabase Edge Function...');
     
-    // Use the correct Supabase Edge Function URL format
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-    const functionUrl = `${supabaseUrl}/functions/v1/google-drive-files`;
+    // Check if we have the Supabase URL
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    console.log('VITE_SUPABASE_URL from env:', supabaseUrl);
     
+    if (!supabaseUrl) {
+      console.error('VITE_SUPABASE_URL is not set in environment variables');
+      throw new Error('Supabase URL not configured. Please set VITE_SUPABASE_URL environment variable.');
+    }
+    
+    const functionUrl = `${supabaseUrl}/functions/v1/google-drive-files`;
     console.log('Function URL:', functionUrl);
+    
+    const requestBody = JSON.stringify({ folderId });
+    console.log('Request body:', requestBody);
     
     const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ folderId })
+      body: requestBody
     });
     
     console.log('Supabase function response:', {
       status: response.status,
       statusText: response.statusText,
-      url: response.url
+      url: response.url,
+      ok: response.ok
     });
     
+    // Try to get response text first to see what we're dealing with
+    const responseText = await response.text();
+    console.log('Raw response text:', responseText);
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('Supabase function error:', errorData);
-      throw new Error(`Backend request failed: ${response.status} - ${errorData.error || 'Unknown error'}`);
+      console.error('Supabase function error - status:', response.status);
+      console.error('Supabase function error - response:', responseText);
+      throw new Error(`Backend request failed: ${response.status} - ${responseText}`);
     }
     
-    const data = await response.json();
-    console.log('Backend response data:', data);
+    // Try to parse the response
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('Parsed response data:', data);
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', parseError);
+      console.error('Response text that failed to parse:', responseText);
+      throw new Error(`Invalid JSON response from backend: ${responseText}`);
+    }
     
     if (!data.files) {
       console.error('No files property in backend response');
@@ -52,6 +74,10 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     
   } catch (error) {
     console.error('Error in fetchGoogleDriveFiles:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   }
 };
