@@ -12,14 +12,9 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     console.log('Making request to Supabase Edge Function...');
     
-    // Check if we have the Supabase URL
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    console.log('VITE_SUPABASE_URL from env:', supabaseUrl);
-    
-    if (!supabaseUrl) {
-      console.error('VITE_SUPABASE_URL is not set in environment variables');
-      throw new Error('Supabase URL not configured. Please set VITE_SUPABASE_URL environment variable.');
-    }
+    // Use the actual Supabase URL for your project
+    const supabaseUrl = "https://rviqvqbohxpkbxrwtwwe.supabase.co";
+    console.log('Using Supabase URL:', supabaseUrl);
     
     const functionUrl = `${supabaseUrl}/functions/v1/google-drive-files`;
     console.log('Function URL:', functionUrl);
