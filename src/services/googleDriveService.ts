@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 interface GoogleDriveFile {
   id: string;
   name: string;
@@ -12,53 +14,18 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     console.log('Making request to Supabase Edge Function...');
     
-    // Use the actual Supabase URL for your project
-    const supabaseUrl = "https://rviqvqbohxpkbxrwtwwe.supabase.co";
-    console.log('Using Supabase URL:', supabaseUrl);
-    
-    const functionUrl = `${supabaseUrl}/functions/v1/google-drive-files`;
-    console.log('Function URL:', functionUrl);
-    
-    const requestBody = JSON.stringify({ folderId });
-    console.log('Request body:', requestBody);
-    
-    const response = await fetch(functionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: requestBody
+    const { data, error } = await supabase.functions.invoke('google-drive-files', {
+      body: { folderId }
     });
     
-    console.log('Supabase function response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-      ok: response.ok
-    });
+    console.log('Supabase function response:', { data, error });
     
-    // Try to get response text first to see what we're dealing with
-    const responseText = await response.text();
-    console.log('Raw response text:', responseText);
-    
-    if (!response.ok) {
-      console.error('Supabase function error - status:', response.status);
-      console.error('Supabase function error - response:', responseText);
-      throw new Error(`Backend request failed: ${response.status} - ${responseText}`);
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(`Backend request failed: ${error.message}`);
     }
     
-    // Try to parse the response
-    let data;
-    try {
-      data = JSON.parse(responseText);
-      console.log('Parsed response data:', data);
-    } catch (parseError) {
-      console.error('Failed to parse response as JSON:', parseError);
-      console.error('Response text that failed to parse:', responseText);
-      throw new Error(`Invalid JSON response from backend: ${responseText}`);
-    }
-    
-    if (!data.files) {
+    if (!data || !data.files) {
       console.error('No files property in backend response');
       return [];
     }
