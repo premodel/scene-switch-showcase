@@ -83,9 +83,16 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
 };
 
 export const getImageUrl = (file: GoogleDriveFile): string => {
-  // Use resourceKey if available (required for shared drive files)
+  // Use webContentLink and convert from download to view for embeddable images
+  if (file.webContentLink) {
+    return file.webContentLink.replace('export=download', 'export=view');
+  }
+  
+  // Fallback to direct URL with resourceKey if available
   if (file.resourceKey) {
     return `https://drive.google.com/uc?id=${file.id}&resourcekey=${file.resourceKey}`;
   }
+  
+  // Final fallback
   return `https://drive.google.com/uc?id=${file.id}`;
 };
