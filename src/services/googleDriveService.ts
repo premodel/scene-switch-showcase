@@ -12,8 +12,8 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     console.log('Making request to Supabase Edge Function...');
     
-    // Call our Supabase Edge Function instead of Google's API directly
-    const response = await fetch('/functions/v1/google-drive-files', {
+    // Use the correct Supabase Edge Function URL format
+    const response = await fetch(`${window.location.origin}/functions/v1/google-drive-files`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -23,7 +23,8 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     
     console.log('Supabase function response:', {
       status: response.status,
-      statusText: response.statusText
+      statusText: response.statusText,
+      url: response.url
     });
     
     if (!response.ok) {
