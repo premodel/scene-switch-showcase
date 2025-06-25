@@ -9,17 +9,42 @@ interface GoogleDriveFile {
 
 // Minimal function: list up to 1000 public files in a folder
 async function listDriveFolder(folderId: string, apiKey: string) {
+  console.log('listDriveFolder called with:', { folderId, apiKeyLength: apiKey?.length });
+  
+  if (!folderId || folderId.trim() === '') {
+    throw new Error('Folder ID is required and cannot be empty');
+  }
+  
+  if (!apiKey || apiKey.trim() === '') {
+    throw new Error('API key is required and cannot be empty');
+  }
+  
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
   const fields = encodeURIComponent('files(id,name,mimeType,webContentLink)');
   const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}`;
+  
+  console.log('Making request to URL:', url);
 
   const res = await fetch(url);
-  if (!res.ok) throw new Error(await res.text());
-  return (await res.json()).files;  // ← array of metadata objects
+  console.log('Response status:', res.status);
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('API Error Response:', errorText);
+    throw new Error(errorText);
+  }
+  
+  const data = await res.json();
+  console.log('API Response data:', data);
+  return data.files;  // ← array of metadata objects
 }
 
 export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
-  console.log('Testing Google Drive API with folder:', folderId);
+  console.log('fetchGoogleDriveFiles called with folderId:', folderId);
+  
+  if (!folderId) {
+    throw new Error('No folder ID provided');
+  }
   
   try {
     // Your actual API key
