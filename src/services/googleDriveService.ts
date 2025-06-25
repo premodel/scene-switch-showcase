@@ -11,21 +11,20 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   
   const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
   
-  // Use the EXACT same URL structure as the working curl command
-  const baseUrl = 'https://www.googleapis.com/drive/v3/files';
-  const params = new URLSearchParams();
-  params.set('q', `'${folderId}' in parents and trashed=false`);
-  params.set('pageSize', '1000');
-  params.set('fields', 'files(id,name,webViewLink,webContentLink,mimeType)');
-  params.set('key', apiKey);
+  // Let's try building the URL EXACTLY like your curl command
+  // Your curl: q='1eJ4SpUoMhwZ2j-nAWUuzYnyYQOxntX6e'+in+parents+and+trashed=false
+  const exactUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`;
   
-  const url = `${baseUrl}?${params.toString()}`;
-  console.log('Final URL:', url);
-  console.log('URL without encoding:', `${baseUrl}?q='${folderId}' in parents and trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`);
+  console.log('=== DEBUGGING ===');
+  console.log('Your working curl query:', `'1eJ4SpUoMhwZ2j-nAWUuzYnyYQOxntX6e'+in+parents+and+trashed=false`);
+  console.log('My generated query:', `'${folderId}'+in+parents+and+trashed=false`);
+  console.log('Folder ID I received:', folderId);
+  console.log('Full URL I will send:', exactUrl);
+  console.log('=== END DEBUG ===');
   
   try {
     console.log('Making fetch request...');
-    const response = await fetch(url, {
+    const response = await fetch(exactUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -35,7 +34,7 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     console.log('Response received:', {
       status: response.status,
       statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
+      url: response.url
     });
     
     if (!response.ok) {
@@ -71,9 +70,6 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     
   } catch (error) {
     console.error('Error in fetchGoogleDriveFiles:', error);
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.error('This might be a CORS issue or network problem');
-    }
     throw error;
   }
 };
