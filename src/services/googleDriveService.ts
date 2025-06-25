@@ -23,72 +23,81 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
-    console.log('=== TRYING DIRECT FOLDER ACCESS ===');
+    console.log('=== FETCHING FILES FROM FOLDER ===');
     console.log('Folder ID:', folderId);
     
-    // Try to access the folder directly first
-    const folderUrl = `https://www.googleapis.com/drive/v3/files/${folderId}?fields=id,name,mimeType&key=${apiKey}`;
-    console.log('Folder access URL:', folderUrl);
+    // Try multiple query approaches
+    const queryApproaches = [
+      // Method 1: Standard parent query with quotes
+      `'${folderId}' in parents`,
+      // Method 2: Standard parent query without quotes  
+      `${folderId} in parents`,
+      // Method 3: Direct parent equality
+      `parents = '${folderId}'`
+    ];
     
-    const folderResponse = await fetch(folderUrl);
-    console.log('Folder response status:', folderResponse.status);
-    
-    if (!folderResponse.ok) {
-      const folderError = await folderResponse.text();
-      console.error('Cannot access folder directly:', folderError);
-      throw new Error(`Cannot access folder: ${folderResponse.status} - ${folderError}`);
+    for (let i = 0; i < queryApproaches.length; i++) {
+      const query = queryApproaches[i];
+      console.log(`=== TRYING QUERY METHOD ${i + 1} ===`);
+      console.log('Query:', query);
+      
+      const filesUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`;
+      console.log('Request URL:', filesUrl);
+      
+      try {
+        const response = await fetch(filesUrl);
+        console.log(`Method ${i + 1} response status:`, response.status);
+        
+        if (response.ok) {
+          const data: GoogleDriveResponse = await response.json();
+          console.log(`Method ${i + 1} response:`, data);
+          
+          if (data.files && data.files.length > 0) {
+            console.log(`SUCCESS! Found ${data.files.length} files with method ${i + 1}`);
+            return data.files;
+          } else {
+            console.log(`Method ${i + 1} returned empty files array`);
+          }
+        } else {
+          const errorText = await response.text();
+          console.error(`Method ${i + 1} failed:`, response.status, errorText);
+        }
+      } catch (error) {
+        console.error(`Method ${i + 1} threw error:`, error);
+      }
     }
     
-    const folderData = await folderResponse.json();
-    console.log('Folder data:', folderData);
+    // If all specific queries failed, try listing all accessible files
+    console.log('=== FALLBACK: LISTING ALL ACCESSIBLE FILES ===');
+    const allFilesUrl = `https://www.googleapis.com/drive/v3/files?pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
     
-    // Now try to list files without the 'in parents' query - use a simpler approach
-    console.log('=== TRYING ALTERNATIVE QUERY METHOD ===');
+    const allFilesResponse = await fetch(allFilesUrl);
+    console.log('All files response status:', allFilesResponse.status);
     
-    // Method 1: Try without quotes around folder ID
-    const query = `${folderId} in parents`;
-    const filesUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
-    console.log('Files query URL:', filesUrl);
-    
-    const filesResponse = await fetch(filesUrl);
-    console.log('Files response status:', filesResponse.status);
-    
-    if (!filesResponse.ok) {
-      const filesError = await filesResponse.text();
-      console.error('Files query failed:', filesError);
-      
-      // Fallback: Try to list all files and filter manually (less efficient but might work)
-      console.log('=== FALLBACK: LISTING ALL FILES ===');
-      const allFilesUrl = `https://www.googleapis.com/drive/v3/files?pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
-      
-      const allFilesResponse = await fetch(allFilesUrl);
-      if (!allFilesResponse.ok) {
-        throw new Error(`All queries failed. Last error: ${filesResponse.status} - ${filesError}`);
-      }
-      
+    if (allFilesResponse.ok) {
       const allFilesData = await allFilesResponse.json();
-      console.log('All files response:', allFilesData);
+      console.log('All files count:', allFilesData.files?.length || 0);
       
       // Filter files that have our folder as parent
       const filteredFiles = allFilesData.files?.filter((file: any) => 
         file.parents && file.parents.includes(folderId)
       ) || [];
       
-      console.log('Filtered files:', filteredFiles);
-      return filteredFiles;
+      console.log('Filtered files for our folder:', filteredFiles.length);
+      
+      if (filteredFiles.length > 0) {
+        return filteredFiles;
+      }
+      
+      // If no files found in our folder, log all folder IDs for debugging
+      const uniqueParents = [...new Set(allFilesData.files?.flatMap((f: any) => f.parents || []) || [])];
+      console.log('All unique folder IDs found:', uniqueParents);
+      console.log('Looking for folder ID:', folderId);
     }
     
-    const filesData: GoogleDriveResponse = await filesResponse.json();
-    console.log('=== FILES QUERY SUCCESS ===');
-    console.log('Files response:', filesData);
+    console.log('=== NO FILES FOUND WITH ANY METHOD ===');
+    return [];
     
-    if (filesData.error) {
-      console.error('Google Drive API returned error:', filesData.error);
-      throw new Error(`Google Drive API error: ${filesData.error.message}`);
-    }
-    
-    console.log('Files found:', filesData.files?.length || 0);
-    return filesData.files || [];
   } catch (error) {
     console.error('Error fetching Google Drive files:', error);
     throw error;
