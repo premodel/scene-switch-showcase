@@ -1,4 +1,3 @@
-
 interface GoogleDriveFile {
   id: string;
   name: string;
@@ -96,30 +95,22 @@ export const getImageUrl = (file: GoogleDriveFile): string => {
   console.log(`  webContentLink: ${file.webContentLink}`);
   console.log(`  resourceKey: ${file.resourceKey}`);
   
-  // Try different URL formats for shared drive files
-  if (file.resourceKey && file.webContentLink) {
-    // For shared drive files, try adding resourcekey parameter
-    const urlWithResourceKey = `${file.webContentLink}&resourcekey=${file.resourceKey}`;
-    console.log(`  Trying URL with resourceKey: ${urlWithResourceKey}`);
-    return urlWithResourceKey;
-  }
-  
   // Use webContentLink and convert from download to view for embeddable images
   if (file.webContentLink) {
     const viewUrl = file.webContentLink.replace('export=download', 'export=view');
-    console.log(`  Trying converted view URL: ${viewUrl}`);
+    console.log(`  Using converted view URL: ${viewUrl}`);
     return viewUrl;
   }
   
   // Fallback to direct URL with resourceKey if available
   if (file.resourceKey) {
-    const fallbackUrl = `https://drive.google.com/uc?id=${file.id}&resourcekey=${file.resourceKey}`;
-    console.log(`  Trying fallback URL with resourceKey: ${fallbackUrl}`);
+    const fallbackUrl = `https://drive.google.com/uc?export=view&id=${file.id}&resourcekey=${file.resourceKey}`;
+    console.log(`  Using fallback URL with resourceKey: ${fallbackUrl}`);
     return fallbackUrl;
   }
   
   // Final fallback
-  const finalFallback = `https://drive.google.com/uc?id=${file.id}`;
+  const finalFallback = `https://drive.google.com/uc?export=view&id=${file.id}`;
   console.log(`  Using final fallback URL: ${finalFallback}`);
   return finalFallback;
 };
