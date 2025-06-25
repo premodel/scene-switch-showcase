@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -27,7 +28,7 @@ const ImageWidget = () => {
         setIsDataLoading(true);
         setError(null);
         
-        console.log('Loading demo data for folder:', folderId);
+        console.log('Loading images from Google Drive folder:', folderId);
         const files = await fetchGoogleDriveFiles(folderId);
         console.log('Retrieved files:', files);
         
@@ -56,7 +57,7 @@ const ImageWidget = () => {
         
         if (parsedFiles.length === 0) {
           console.log('No parsed files found. Original files:', files.map(f => f.name));
-          setError('This is demo data. In a real implementation, Google Drive API access requires a backend service to handle CORS restrictions.');
+          setError('No valid scene files found. Make sure your images follow the naming format: scene_name-version_name.jpg');
           setIsDataLoading(false);
           return;
         }
@@ -101,7 +102,7 @@ const ImageWidget = () => {
     return (
       <div className="w-full max-w-4xl mx-auto p-8 text-center">
         <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-slate-600">Loading demo data...</p>
+        <p className="text-slate-600">Loading images from Google Drive...</p>
       </div>
     );
   }
@@ -109,18 +110,9 @@ const ImageWidget = () => {
   if (error) {
     return (
       <div className="w-full max-w-4xl mx-auto p-8 text-center">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-          <h3 className="text-amber-800 font-semibold mb-2">Demo Mode</h3>
-          <p className="text-amber-600 text-sm">{error}</p>
-          <div className="mt-4 text-left bg-amber-100 p-4 rounded text-sm">
-            <p className="font-medium mb-2">To implement real Google Drive integration:</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Use a backend service (like Supabase Edge Functions)</li>
-              <li>Or use a CORS proxy service</li>
-              <li>Or implement Google Drive's Picker API</li>
-              <li>Or have users manually upload files</li>
-            </ol>
-          </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-red-800 font-semibold mb-2">Error</h3>
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
       </div>
     );
@@ -170,14 +162,16 @@ const ImageWidget = () => {
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-            <div className="text-center p-8">
-              <div className="text-6xl mb-4">🏠</div>
-              <h3 className="text-xl font-semibold text-slate-700 mb-2">{currentScene.name}</h3>
-              <p className="text-sm text-slate-600">{currentImage.name}</p>
-              <p className="text-xs text-slate-500 mt-2">Demo placeholder image</p>
-            </div>
-          </div>
+          <img
+            src={currentImage.imageUrl}
+            alt={`${currentScene.name} - ${currentImage.name}`}
+            className="w-full h-full object-cover"
+            onLoad={handleImageLoad}
+            onError={() => {
+              console.error('Failed to load image:', currentImage.imageUrl);
+              setIsImageLoading(false);
+            }}
+          />
         </div>
       </div>
 

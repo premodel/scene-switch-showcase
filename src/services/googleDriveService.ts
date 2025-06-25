@@ -22,26 +22,25 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   console.log('Testing Google Drive API with folder:', folderId);
   
   try {
-    // Call our Supabase edge function to get the files
-    const response = await fetch(`https://rviqvqbohxpkbxrwtwwe.supabase.co/functions/v1/google-drive-files`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ folderId })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Supabase function error:', errorText);
-      throw new Error(`Failed to fetch files: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('Retrieved files from Supabase function:', data.files);
+    // Use a demo API key - replace with your own for production
+    const apiKey = 'AIzaSyDemoKey123456789'; // This is just a placeholder
+    
+    console.log('Using minimal function to fetch files from folder:', folderId);
+    
+    const files = await listDriveFolder(folderId, apiKey);
+    console.log('Files retrieved:', files?.length || 0);
+    console.log('File details:', files?.map((f: any) => ({ name: f.name, mimeType: f.mimeType })));
+    
+    // Filter for image files
+    const imageFiles = files?.filter((file: any) => 
+      file.mimeType && file.mimeType.startsWith('image/')
+    ) || [];
+    
+    console.log('Image files found:', imageFiles.length);
+    console.log('Image files:', imageFiles.map((f: any) => f.name));
     
     // Transform the response to match our interface
-    const transformedFiles: GoogleDriveFile[] = data.files.map((file: any) => ({
+    const transformedFiles: GoogleDriveFile[] = imageFiles.map((file: any) => ({
       id: file.id,
       name: file.name,
       webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
