@@ -1,4 +1,6 @@
 
+import { supabase } from "@/integrations/supabase/client";
+
 interface GoogleDriveFile {
   id: string;
   name: string;
@@ -8,48 +10,29 @@ interface GoogleDriveFile {
 }
 
 export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
-  console.log('Fetching files from Google Drive folder directly:', folderId);
+  console.log('Fetching files from Google Drive folder via Supabase:', folderId);
   
   try {
-    // Use a public Google Drive API key approach
-    // For now, we'll use the public files approach that doesn't require authentication
-    const apiKey = 'AIzaSyBq-YfUgFgPlPgGPYmnC9GE9vHvF4K2Jk8'; // This is a demo key, user should replace with their own
+    console.log('Making request to Supabase Edge Function...');
     
-    console.log('Making direct request to Google Drive API...');
-    
-    const url = `https://www.googleapis.com/drive/v3/files?q='${folderId}' in parents and trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      }
+    const { data, error } = await supabase.functions.invoke('google-drive-files', {
+      body: { folderId }
     });
     
-    console.log('Google Drive API response status:', response.status);
+    console.log('Supabase function response:', { data, error });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Google Drive API error:', errorText);
-      
-      if (response.status === 403) {
-        throw new Error('Google Drive API access denied. Please make sure your folder is publicly accessible and you have a valid API key.');
-      }
-      
-      throw new Error(`Google Drive API error: ${response.status} - ${errorText}`);
+    if (error) {
+      console.error('Supabase function error:', error);
+      throw new Error(`Backend request failed: ${error.message}`);
     }
     
-    const data = await response.json();
-    console.log('Files retrieved:', data.files?.length || 0);
+    if (!data || !data.files) {
+      console.error('No files data received from Supabase function');
+      throw new Error('No files data received from backend');
+    }
     
-    // Filter for image files
-    const imageFiles = data.files?.filter((file: any) => 
-      file.mimeType && file.mimeType.startsWith('image/')
-    ) || [];
-    
-    console.log('Image files found:', imageFiles.length);
-    
-    return imageFiles;
+    console.log('Files retrieved via Supabase:', data.files.length);
+    return data.files;
     
   } catch (error) {
     console.error('Error in fetchGoogleDriveFiles:', error);

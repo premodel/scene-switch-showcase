@@ -7,12 +7,15 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('Edge function called with method:', req.method)
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const { folderId } = await req.json()
+    console.log('Received folderId:', folderId)
     
     if (!folderId) {
       return new Response(
@@ -26,6 +29,7 @@ serve(async (req) => {
 
     // Get the API key from Supabase secrets
     const apiKey = Deno.env.get('GOOGLE_DRIVE_API_KEY')
+    console.log('API key exists:', !!apiKey)
     
     if (!apiKey) {
       return new Response(
@@ -85,7 +89,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in google-drive-files function:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
