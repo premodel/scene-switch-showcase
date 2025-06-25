@@ -23,66 +23,68 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
-    // Debug: Let's try multiple query approaches
     console.log('=== DEBUGGING GOOGLE DRIVE API ===');
     console.log('Folder ID:', folderId);
     console.log('Folder ID type:', typeof folderId);
     console.log('Folder ID length:', folderId.length);
     
-    // Try the standard query format
-    const query = `'${folderId}' in parents`;
-    const encodedQuery = encodeURIComponent(query);
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodedQuery}&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
+    // First, let's test if the API key works at all by listing some files
+    console.log('=== TESTING API KEY ===');
+    const testUrl = `https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name,parents)&key=${apiKey}`;
+    const testResponse = await fetch(testUrl);
+    const testData = await testResponse.json();
+    console.log('Test API response:', testData);
     
-    console.log('Query:', query);
-    console.log('Encoded query:', encodedQuery);
-    console.log('Full URL:', url);
+    // Now try the folder-specific query with different approaches
+    console.log('=== TRYING FOLDER-SPECIFIC QUERIES ===');
     
-    const response = await fetch(url);
+    // Approach 1: Standard format
+    const query1 = `'${folderId}' in parents`;
+    const url1 = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query1)}&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
+    console.log('Approach 1 URL:', url1);
     
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    const response1 = await fetch(url1);
+    console.log('Approach 1 status:', response1.status);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('API Error Response:', errorText);
-      throw new Error(`Google Drive API error: ${response.status} - ${errorText}`);
-    }
-    
-    const data: GoogleDriveResponse = await response.json();
-    console.log('=== FULL API RESPONSE ===');
-    console.log(JSON.stringify(data, null, 2));
-    
-    if (data.error) {
-      console.error('Google Drive API returned error:', data.error);
-      throw new Error(`Google Drive API error: ${data.error.message}`);
-    }
-    
-    console.log('Files array:', data.files);
-    console.log('Number of files:', data.files?.length || 0);
-    
-    if (!data.files || data.files.length === 0) {
-      console.warn('=== EMPTY FOLDER DEBUGGING ===');
-      console.warn('No files found. Possible reasons:');
-      console.warn('1. Folder is actually empty');
-      console.warn('2. Folder ID is incorrect');
-      console.warn('3. Folder is not publicly accessible');
-      console.warn('4. Files exist but are in a subfolder');
-      console.warn(`5. Try visiting: https://drive.google.com/drive/folders/${folderId}`);
+    if (!response1.ok) {
+      const errorText1 = await response1.text();
+      console.error('Approach 1 error:', errorText1);
       
-      // Let's also try a query without the folder restriction to test API key
-      console.warn('=== TESTING API KEY WITH UNRESTRICTED QUERY ===');
-      const testUrl = `https://www.googleapis.com/drive/v3/files?fields=files(id,name)&key=${apiKey}`;
-      try {
-        const testResponse = await fetch(testUrl);
-        const testData = await testResponse.json();
-        console.log('Test query result (your files):', testData);
-      } catch (testError) {
-        console.error('Test query failed:', testError);
+      // Approach 2: Without quotes
+      console.log('=== TRYING APPROACH 2 (no quotes) ===');
+      const query2 = `${folderId} in parents`;
+      const url2 = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query2)}&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
+      console.log('Approach 2 URL:', url2);
+      
+      const response2 = await fetch(url2);
+      console.log('Approach 2 status:', response2.status);
+      
+      if (!response2.ok) {
+        const errorText2 = await response2.text();
+        console.error('Approach 2 error:', errorText2);
+        throw new Error(`Both query approaches failed. Last error: ${response2.status} - ${errorText2}`);
       }
+      
+      const data2 = await response2.json();
+      console.log('Approach 2 success! Data:', data2);
+      return data2.files || [];
     }
     
-    return data.files || [];
+    const data1: GoogleDriveResponse = await response1.json();
+    console.log('=== APPROACH 1 SUCCESS ===');
+    console.log('Full response:', JSON.stringify(data1, null, 2));
+    
+    if (data1.error) {
+      console.error('Google Drive API returned error:', data1.error);
+      throw new Error(`Google Drive API error: ${data1.error.message}`);
+    }
+    
+    console.log('Files found:', data1.files?.length || 0);
+    if (data1.files && data1.files.length > 0) {
+      console.log('File names:', data1.files.map(f => f.name));
+    }
+    
+    return data1.files || [];
   } catch (error) {
     console.error('Error fetching Google Drive files:', error);
     throw error;
