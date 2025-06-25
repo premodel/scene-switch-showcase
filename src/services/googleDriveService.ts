@@ -7,50 +7,53 @@ interface GoogleDriveFile {
   mimeType: string;
 }
 
-// Since we can't call the API directly due to CORS, we'll use a different approach
-// We'll generate the image URLs directly from the folder ID and known file patterns
-export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
-  console.log('Using alternative approach for Google Drive folder:', folderId);
-  
-  // For now, we'll return mock data to demonstrate the UI
-  // In a real implementation, you'd need to either:
-  // 1. Use a CORS proxy service
-  // 2. Have users manually list their files
-  // 3. Use Google Drive's embed API
-  
-  const mockFiles: GoogleDriveFile[] = [
-    {
-      id: 'mock1',
-      name: 'kitchen-modern.jpg',
-      webViewLink: `https://drive.google.com/file/d/mock1/view`,
-      webContentLink: `https://drive.google.com/uc?id=mock1`,
-      mimeType: 'image/jpeg'
-    },
-    {
-      id: 'mock2', 
-      name: 'kitchen-traditional.jpg',
-      webViewLink: `https://drive.google.com/file/d/mock2/view`,
-      webContentLink: `https://drive.google.com/uc?id=mock2`,
-      mimeType: 'image/jpeg'
-    },
-    {
-      id: 'mock3',
-      name: 'bedroom-modern.jpg', 
-      webViewLink: `https://drive.google.com/file/d/mock3/view`,
-      webContentLink: `https://drive.google.com/uc?id=mock3`,
-      mimeType: 'image/jpeg'
-    },
-    {
-      id: 'mock4',
-      name: 'bedroom-cozy.jpg',
-      webViewLink: `https://drive.google.com/file/d/mock4/view`, 
-      webContentLink: `https://drive.google.com/uc?id=mock4`,
-      mimeType: 'image/jpeg'
-    }
-  ];
+// Minimal function: list up to 1000 public files in a folder
+async function listDriveFolder(folderId: string, apiKey: string) {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}`;
 
-  console.log('Returning mock files for demonstration:', mockFiles);
-  return mockFiles;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()).files;  // ← array of metadata objects
+}
+
+export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
+  console.log('Testing Google Drive API with folder:', folderId);
+  
+  try {
+    // Call our Supabase edge function to get the files
+    const response = await fetch(`https://rviqvqbohxpkbxrwtwwe.supabase.co/functions/v1/google-drive-files`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ folderId })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Supabase function error:', errorText);
+      throw new Error(`Failed to fetch files: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Retrieved files from Supabase function:', data.files);
+    
+    // Transform the response to match our interface
+    const transformedFiles: GoogleDriveFile[] = data.files.map((file: any) => ({
+      id: file.id,
+      name: file.name,
+      webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
+      webContentLink: file.webContentLink || `https://drive.google.com/uc?id=${file.id}`,
+      mimeType: file.mimeType
+    }));
+
+    return transformedFiles;
+  } catch (error) {
+    console.error('Error in fetchGoogleDriveFiles:', error);
+    throw error;
+  }
 };
 
 export const getImageUrl = (file: GoogleDriveFile): string => {

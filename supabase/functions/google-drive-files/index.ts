@@ -6,6 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Minimal function: list up to 1000 public files in a folder
+async function listDriveFolder(folderId: string, apiKey: string) {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
+  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink)');
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}`;
+
+  console.log('Making request to URL:', url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()).files;  // ← array of metadata objects
+}
+
 serve(async (req) => {
   console.log('Edge function called with method:', req.method)
   
@@ -41,71 +53,19 @@ serve(async (req) => {
       )
     }
 
-    console.log('Fetching files from Google Drive folder:', folderId)
+    console.log('Using minimal function to fetch files from folder:', folderId)
     
-    // Try a simpler approach - just get folder metadata first
-    console.log('First, checking if folder exists...')
-    const folderCheckUrl = `https://www.googleapis.com/drive/v3/files/${folderId}?key=${apiKey}`
-    console.log('Folder check URL:', folderCheckUrl)
-    
-    const folderResponse = await fetch(folderCheckUrl)
-    console.log('Folder check response status:', folderResponse.status)
-    
-    if (!folderResponse.ok) {
-      const folderError = await folderResponse.text()
-      console.error('Folder check failed:', folderError)
-      return new Response(
-        JSON.stringify({ 
-          error: `Cannot access folder: ${folderResponse.status}`,
-          details: folderError,
-          suggestion: 'Make sure the folder is shared publicly with "Anyone with the link can view"'
-        }),
-        { 
-          status: folderResponse.status, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-    
-    const folderData = await folderResponse.json()
-    console.log('Folder data:', folderData)
-    
-    // Now try to get files in the folder
-    const filesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`
-    console.log('Files URL:', filesUrl)
-    
-    const response = await fetch(filesUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      }
-    })
-    
-    console.log('Google Drive API response status:', response.status)
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Google Drive API error response:', errorText)
-      return new Response(
-        JSON.stringify({ error: `Google Drive API error: ${response.status} - ${errorText}` }),
-        { 
-          status: response.status, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      )
-    }
-    
-    const data = await response.json()
-    console.log('Raw API response:', JSON.stringify(data, null, 2))
-    console.log('Files retrieved:', data.files?.length || 0)
+    const files = await listDriveFolder(folderId, apiKey);
+    console.log('Files retrieved:', files?.length || 0);
+    console.log('File details:', files?.map((f: any) => ({ name: f.name, mimeType: f.mimeType })));
     
     // Filter for image files
-    const imageFiles = data.files?.filter((file: any) => 
+    const imageFiles = files?.filter((file: any) => 
       file.mimeType && file.mimeType.startsWith('image/')
-    ) || []
+    ) || [];
     
-    console.log('Image files found:', imageFiles.length)
-    console.log('Image files:', imageFiles.map((f: any) => f.name))
+    console.log('Image files found:', imageFiles.length);
+    console.log('Image files:', imageFiles.map((f: any) => f.name));
     
     return new Response(
       JSON.stringify({ files: imageFiles }),
