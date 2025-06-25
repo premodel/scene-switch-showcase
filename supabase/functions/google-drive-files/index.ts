@@ -43,18 +43,38 @@ serve(async (req) => {
 
     console.log('Fetching files from Google Drive folder:', folderId)
     
-    // Use the correct Google Drive API endpoint with proper query formatting
-    const params = new URLSearchParams({
-      q: `'${folderId}' in parents and trashed=false`,
-      pageSize: '1000',
-      fields: 'files(id,name,webViewLink,webContentLink,mimeType)',
-      key: apiKey
-    });
+    // Try a simpler approach - just get folder metadata first
+    console.log('First, checking if folder exists...')
+    const folderCheckUrl = `https://www.googleapis.com/drive/v3/files/${folderId}?key=${apiKey}`
+    console.log('Folder check URL:', folderCheckUrl)
     
-    const url = `https://www.googleapis.com/drive/v3/files?${params.toString()}`
-    console.log('Making request to Google Drive API with URL:', url)
+    const folderResponse = await fetch(folderCheckUrl)
+    console.log('Folder check response status:', folderResponse.status)
     
-    const response = await fetch(url, {
+    if (!folderResponse.ok) {
+      const folderError = await folderResponse.text()
+      console.error('Folder check failed:', folderError)
+      return new Response(
+        JSON.stringify({ 
+          error: `Cannot access folder: ${folderResponse.status}`,
+          details: folderError,
+          suggestion: 'Make sure the folder is shared publicly with "Anyone with the link can view"'
+        }),
+        { 
+          status: folderResponse.status, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+    
+    const folderData = await folderResponse.json()
+    console.log('Folder data:', folderData)
+    
+    // Now try to get files in the folder
+    const filesUrl = `https://www.googleapis.com/drive/v3/files?q='${folderId}'+in+parents+and+trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`
+    console.log('Files URL:', filesUrl)
+    
+    const response = await fetch(filesUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -85,7 +105,7 @@ serve(async (req) => {
     ) || []
     
     console.log('Image files found:', imageFiles.length)
-    console.log('Image files:', imageFiles.map(f => f.name))
+    console.log('Image files:', imageFiles.map((f: any) => f.name))
     
     return new Response(
       JSON.stringify({ files: imageFiles }),
