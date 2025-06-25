@@ -1,5 +1,4 @@
 
-
 interface GoogleDriveFile {
   id: string;
   name: string;
@@ -9,7 +8,7 @@ interface GoogleDriveFile {
   resourceKey?: string;
 }
 
-// First try regular drive, then shared drive if that fails
+// List files from Google Drive folder using the correct API endpoint
 async function listDriveFolder(folderId: string, apiKey: string) {
   console.log('listDriveFolder called with:', { folderId, apiKeyLength: apiKey?.length });
   
@@ -22,25 +21,14 @@ async function listDriveFolder(folderId: string, apiKey: string) {
   }
   
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink,webViewLink,resourceKey,thumbnailLink)');
+  const fields = encodeURIComponent('files(id,name,mimeType,resourceKey)');
   
-  // First try regular drive folder
-  let url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}`;
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=1000&key=${apiKey}`;
   
-  console.log('Trying regular drive folder with URL:', url);
+  console.log('Making API request to:', url);
   
-  let res = await fetch(url);
-  console.log('Regular drive response status:', res.status);
-  
-  // If regular drive fails, try shared drive
-  if (!res.ok) {
-    console.log('Regular drive failed, trying shared drive...');
-    url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives`;
-    
-    console.log('Trying shared drive with URL:', url);
-    res = await fetch(url);
-    console.log('Shared drive response status:', res.status);
-  }
+  const res = await fetch(url);
+  console.log('API response status:', res.status);
   
   if (!res.ok) {
     const errorText = await res.text();
@@ -50,7 +38,7 @@ async function listDriveFolder(folderId: string, apiKey: string) {
   
   const data = await res.json();
   console.log('API Response data:', data);
-  return data.files;  // ← array of metadata objects
+  return data.files;
 }
 
 export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDriveFile[]> => {
@@ -64,7 +52,7 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     // Your actual API key
     const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
-    console.log('Using minimal function to fetch files from folder:', folderId);
+    console.log('Fetching files from folder:', folderId);
     
     const files = await listDriveFolder(folderId, apiKey);
     console.log('Files retrieved:', files?.length || 0);
@@ -82,8 +70,8 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     const transformedFiles: GoogleDriveFile[] = imageFiles.map((file: any) => ({
       id: file.id,
       name: file.name,
-      webViewLink: file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`,
-      webContentLink: file.webContentLink || `https://drive.google.com/uc?id=${file.id}`,
+      webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
+      webContentLink: `https://drive.google.com/uc?id=${file.id}`,
       mimeType: file.mimeType,
       resourceKey: file.resourceKey
     }));
@@ -92,7 +80,6 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     transformedFiles.forEach(file => {
       const imageUrl = getImageUrl(file);
       console.log(`File: ${file.name}`);
-      console.log(`  webContentLink: ${file.webContentLink}`);
       console.log(`  resourceKey: ${file.resourceKey}`);
       console.log(`  Generated imageUrl: ${imageUrl}`);
     });
@@ -106,32 +93,16 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
 
 export const getImageUrl = (file: GoogleDriveFile): string => {
   console.log(`Getting image URL for file: ${file.name}`);
-  console.log(`  webContentLink: ${file.webContentLink}`);
   console.log(`  resourceKey: ${file.resourceKey}`);
   
-  // For shared drive files with resourceKey, use it with webContentLink
-  if (file.resourceKey && file.webContentLink) {
-    const urlWithResourceKey = `${file.webContentLink}&resourcekey=${file.resourceKey}`;
-    console.log(`  Using URL with resourceKey: ${urlWithResourceKey}`);
-    return urlWithResourceKey;
-  }
+  // Use the correct Google Drive API endpoint for media streaming
+  const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
   
-  // Use webContentLink and convert from download to view for embeddable images
-  if (file.webContentLink) {
-    const viewUrl = file.webContentLink.replace('export=download', 'export=view');
-    console.log(`  Using converted view URL: ${viewUrl}`);
-    return viewUrl;
-  }
+  const baseUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&supportsAllDrives=true&key=${apiKey}`;
   
-  // Fallback to direct URL with resourceKey if available
-  if (file.resourceKey) {
-    const fallbackUrl = `https://drive.google.com/uc?export=view&id=${file.id}&resourcekey=${file.resourceKey}`;
-    console.log(`  Using fallback URL with resourceKey: ${fallbackUrl}`);
-    return fallbackUrl;
-  }
+  // Append resourceKey only if it exists
+  const finalUrl = file.resourceKey ? `${baseUrl}&resourceKey=${file.resourceKey}` : baseUrl;
   
-  // Final fallback
-  const finalFallback = `https://drive.google.com/uc?export=view&id=${file.id}`;
-  console.log(`  Using final fallback URL: ${finalFallback}`);
-  return finalFallback;
+  console.log(`  Generated URL: ${finalUrl}`);
+  return finalUrl;
 };
