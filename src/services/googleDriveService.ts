@@ -11,30 +11,51 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   
   const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
   
-  // Build the URL exactly like the working curl command
-  // Notice: using + instead of %20 for spaces, and manual encoding
-  const query = `'${folderId}'+in+parents+and+trashed=false`;
-  const fields = 'files(id,name,webViewLink,webContentLink,mimeType)';
+  // Use the EXACT same URL structure as the working curl command
+  const baseUrl = 'https://www.googleapis.com/drive/v3/files';
+  const params = new URLSearchParams();
+  params.set('q', `'${folderId}' in parents and trashed=false`);
+  params.set('pageSize', '1000');
+  params.set('fields', 'files(id,name,webViewLink,webContentLink,mimeType)');
+  params.set('key', apiKey);
   
-  const url = `https://www.googleapis.com/drive/v3/files?q=${query}&pageSize=1000&fields=${fields}&key=${apiKey}`;
-  
-  console.log('API URL:', url);
+  const url = `${baseUrl}?${params.toString()}`;
+  console.log('Final URL:', url);
+  console.log('URL without encoding:', `${baseUrl}?q='${folderId}' in parents and trashed=false&pageSize=1000&fields=files(id,name,webViewLink,webContentLink,mimeType)&key=${apiKey}`);
   
   try {
-    const response = await fetch(url);
-    console.log('Response status:', response.status);
+    console.log('Making fetch request...');
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    console.log('Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Error:', errorText);
+      console.error('API Error Response:', errorText);
       throw new Error(`API request failed: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('API Response:', data);
-    console.log('Total files found:', data.files?.length || 0);
+    console.log('Raw API Response:', JSON.stringify(data, null, 2));
+    console.log('Files array:', data.files);
+    console.log('Files array length:', data.files?.length || 0);
     
-    if (!data.files || data.files.length === 0) {
+    if (!data.files) {
+      console.error('No files property in response');
+      return [];
+    }
+    
+    if (data.files.length === 0) {
+      console.error('Files array is empty but should contain 18 files according to curl');
       return [];
     }
     
@@ -49,7 +70,10 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     return imageFiles;
     
   } catch (error) {
-    console.error('Error fetching files:', error);
+    console.error('Error in fetchGoogleDriveFiles:', error);
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      console.error('This might be a CORS issue or network problem');
+    }
     throw error;
   }
 };
