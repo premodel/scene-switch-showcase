@@ -75,6 +75,15 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
       resourceKey: file.resourceKey
     }));
 
+    // Log the URLs we're generating for each file
+    transformedFiles.forEach(file => {
+      const imageUrl = getImageUrl(file);
+      console.log(`File: ${file.name}`);
+      console.log(`  webContentLink: ${file.webContentLink}`);
+      console.log(`  resourceKey: ${file.resourceKey}`);
+      console.log(`  Generated imageUrl: ${imageUrl}`);
+    });
+
     return transformedFiles;
   } catch (error) {
     console.error('Error in fetchGoogleDriveFiles:', error);
@@ -83,16 +92,34 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
 };
 
 export const getImageUrl = (file: GoogleDriveFile): string => {
+  console.log(`Getting image URL for file: ${file.name}`);
+  console.log(`  webContentLink: ${file.webContentLink}`);
+  console.log(`  resourceKey: ${file.resourceKey}`);
+  
+  // Try different URL formats for shared drive files
+  if (file.resourceKey && file.webContentLink) {
+    // For shared drive files, try adding resourcekey parameter
+    const urlWithResourceKey = `${file.webContentLink}&resourcekey=${file.resourceKey}`;
+    console.log(`  Trying URL with resourceKey: ${urlWithResourceKey}`);
+    return urlWithResourceKey;
+  }
+  
   // Use webContentLink and convert from download to view for embeddable images
   if (file.webContentLink) {
-    return file.webContentLink.replace('export=download', 'export=view');
+    const viewUrl = file.webContentLink.replace('export=download', 'export=view');
+    console.log(`  Trying converted view URL: ${viewUrl}`);
+    return viewUrl;
   }
   
   // Fallback to direct URL with resourceKey if available
   if (file.resourceKey) {
-    return `https://drive.google.com/uc?id=${file.id}&resourcekey=${file.resourceKey}`;
+    const fallbackUrl = `https://drive.google.com/uc?id=${file.id}&resourcekey=${file.resourceKey}`;
+    console.log(`  Trying fallback URL with resourceKey: ${fallbackUrl}`);
+    return fallbackUrl;
   }
   
   // Final fallback
-  return `https://drive.google.com/uc?id=${file.id}`;
+  const finalFallback = `https://drive.google.com/uc?id=${file.id}`;
+  console.log(`  Using final fallback URL: ${finalFallback}`);
+  return finalFallback;
 };
