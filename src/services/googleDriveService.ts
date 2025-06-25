@@ -13,7 +13,12 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     console.log('Making request to Supabase Edge Function...');
     
     // Use the correct Supabase Edge Function URL format
-    const response = await fetch(`${window.location.origin}/functions/v1/google-drive-files`, {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+    const functionUrl = `${supabaseUrl}/functions/v1/google-drive-files`;
+    
+    console.log('Function URL:', functionUrl);
+    
+    const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
