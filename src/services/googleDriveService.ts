@@ -5,6 +5,7 @@ interface GoogleDriveFile {
   webViewLink: string;
   webContentLink: string;
   mimeType: string;
+  resourceKey?: string;
 }
 
 // Minimal function: list up to 1000 public files in a folder
@@ -20,7 +21,7 @@ async function listDriveFolder(folderId: string, apiKey: string) {
   }
   
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false`);
-  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink)');
+  const fields = encodeURIComponent('files(id,name,mimeType,webContentLink,resourceKey,thumbnailLink)');
   const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=${fields}&pageSize=1000&key=${apiKey}&supportsAllDrives=true&includeItemsFromAllDrives=true`;
   
   console.log('Making request to URL:', url);
@@ -54,7 +55,7 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     
     const files = await listDriveFolder(folderId, apiKey);
     console.log('Files retrieved:', files?.length || 0);
-    console.log('File details:', files?.map((f: any) => ({ name: f.name, mimeType: f.mimeType })));
+    console.log('File details:', files?.map((f: any) => ({ name: f.name, mimeType: f.mimeType, resourceKey: f.resourceKey })));
     
     // Filter for image files
     const imageFiles = files?.filter((file: any) => 
@@ -62,7 +63,7 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     ) || [];
     
     console.log('Image files found:', imageFiles.length);
-    console.log('Image files:', imageFiles.map((f: any) => f.name));
+    console.log('Image files:', imageFiles.map((f: any) => ({ name: f.name, resourceKey: f.resourceKey })));
     
     // Transform the response to match our interface
     const transformedFiles: GoogleDriveFile[] = imageFiles.map((file: any) => ({
@@ -70,7 +71,8 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
       name: file.name,
       webViewLink: `https://drive.google.com/file/d/${file.id}/view`,
       webContentLink: file.webContentLink || `https://drive.google.com/uc?id=${file.id}`,
-      mimeType: file.mimeType
+      mimeType: file.mimeType,
+      resourceKey: file.resourceKey
     }));
 
     return transformedFiles;
@@ -81,5 +83,9 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
 };
 
 export const getImageUrl = (file: GoogleDriveFile): string => {
+  // Use resourceKey if available (required for shared drive files)
+  if (file.resourceKey) {
+    return `https://drive.google.com/uc?id=${file.id}&resourcekey=${file.resourceKey}`;
+  }
   return `https://drive.google.com/uc?id=${file.id}`;
 };
