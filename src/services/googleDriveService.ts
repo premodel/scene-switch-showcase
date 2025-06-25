@@ -22,8 +22,8 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   console.log('Testing Google Drive API with folder:', folderId);
   
   try {
-    // Use a demo API key - replace with your own for production
-    const apiKey = 'AIzaSyDemoKey123456789'; // This is just a placeholder
+    // Your actual API key
+    const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
     console.log('Using minimal function to fetch files from folder:', folderId);
     
