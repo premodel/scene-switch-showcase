@@ -23,15 +23,20 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
   try {
     const apiKey = 'AIzaSyAFImbwSbOoswBEy-PuRTnE4-hTYsodcbQ';
     
-    // Fixed: Properly encode the query parameter with quotes around folder ID
+    // Debug: Let's try multiple query approaches
+    console.log('=== DEBUGGING GOOGLE DRIVE API ===');
+    console.log('Folder ID:', folderId);
+    console.log('Folder ID type:', typeof folderId);
+    console.log('Folder ID length:', folderId.length);
+    
+    // Try the standard query format
     const query = `'${folderId}' in parents`;
     const encodedQuery = encodeURIComponent(query);
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodedQuery}&fields=files(id,name,webViewLink,webContentLink)&key=${apiKey}`;
+    const url = `https://www.googleapis.com/drive/v3/files?q=${encodedQuery}&fields=files(id,name,webViewLink,webContentLink,mimeType,parents)&key=${apiKey}`;
     
-    console.log('Making request to Google Drive API...');
-    console.log('Folder ID:', folderId);
     console.log('Query:', query);
-    console.log('API URL:', url);
+    console.log('Encoded query:', encodedQuery);
+    console.log('Full URL:', url);
     
     const response = await fetch(url);
     
@@ -45,22 +50,36 @@ export const fetchGoogleDriveFiles = async (folderId: string): Promise<GoogleDri
     }
     
     const data: GoogleDriveResponse = await response.json();
-    console.log('Raw Google Drive API response:', data);
+    console.log('=== FULL API RESPONSE ===');
+    console.log(JSON.stringify(data, null, 2));
     
     if (data.error) {
       console.error('Google Drive API returned error:', data.error);
       throw new Error(`Google Drive API error: ${data.error.message}`);
     }
     
-    console.log('Number of files returned:', data.files?.length || 0);
-    console.log('File names:', data.files?.map(f => f.name) || []);
+    console.log('Files array:', data.files);
+    console.log('Number of files:', data.files?.length || 0);
     
     if (!data.files || data.files.length === 0) {
-      console.warn('No files found in folder. This could mean:');
-      console.warn('1. The folder is empty');
-      console.warn('2. The folder ID is incorrect');
-      console.warn('3. The folder is not publicly accessible');
-      console.warn('4. The API key does not have permission to access this folder');
+      console.warn('=== EMPTY FOLDER DEBUGGING ===');
+      console.warn('No files found. Possible reasons:');
+      console.warn('1. Folder is actually empty');
+      console.warn('2. Folder ID is incorrect');
+      console.warn('3. Folder is not publicly accessible');
+      console.warn('4. Files exist but are in a subfolder');
+      console.warn(`5. Try visiting: https://drive.google.com/drive/folders/${folderId}`);
+      
+      // Let's also try a query without the folder restriction to test API key
+      console.warn('=== TESTING API KEY WITH UNRESTRICTED QUERY ===');
+      const testUrl = `https://www.googleapis.com/drive/v3/files?fields=files(id,name)&key=${apiKey}`;
+      try {
+        const testResponse = await fetch(testUrl);
+        const testData = await testResponse.json();
+        console.log('Test query result (your files):', testData);
+      } catch (testError) {
+        console.error('Test query failed:', testError);
+      }
     }
     
     return data.files || [];
