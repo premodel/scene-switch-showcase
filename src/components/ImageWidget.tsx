@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -13,11 +14,17 @@ const ImageWidget = () => {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Get folder from URL parameters, default to 'af-2nd-floor' for backwards compatibility
+  // Get folder from URL parameters - now required
   const bucketName = 'premodel-assets';
-  const folderPath = searchParams.get('folderId') || 'af-2nd-floor';
+  const folderPath = searchParams.get('folderId');
 
   useEffect(() => {
+    if (!folderPath) {
+      setError('folderId parameter is required. Please add ?folderId=YOUR_FOLDER_NAME to the URL.');
+      setIsDataLoading(false);
+      return;
+    }
+
     const loadImagesFromCloudStorage = async () => {
       try {
         setIsDataLoading(true);
@@ -52,7 +59,7 @@ const ImageWidget = () => {
         
         if (parsedFiles.length === 0) {
           console.log('No parsed files found. Original files:', files.map(f => f.name));
-          setError('No valid scene files found. Make sure your images follow the naming format: scene_name-version_name.jpg');
+          setError('No valid scene files found. Make sure your images follow the naming format: scene_name_version_name.jpg');
           setIsDataLoading(false);
           return;
         }
