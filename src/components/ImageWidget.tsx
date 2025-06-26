@@ -13,9 +13,9 @@ const ImageWidget = () => {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Default to your bucket and folder
+  // Get folder from URL parameters, default to 'af-2nd-floor' for backwards compatibility
   const bucketName = 'premodel-assets';
-  const folderPath = 'af-2nd-floor';
+  const folderPath = searchParams.get('folderId') || 'af-2nd-floor';
 
   useEffect(() => {
     const loadImagesFromCloudStorage = async () => {
@@ -72,7 +72,7 @@ const ImageWidget = () => {
     };
 
     loadImagesFromCloudStorage();
-  }, []);
+  }, [folderPath]);
 
   const handleSceneChange = (sceneIndex: number) => {
     if (sceneIndex !== selectedSceneIndex) {
