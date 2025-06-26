@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -135,8 +134,8 @@ const ImageWidget = () => {
     <div className="w-full max-w-4xl mx-auto">
       {/* Scene Selection */}
       <div className="mb-6">
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="text-sm font-medium text-slate-700 whitespace-nowrap">Scene:</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-slate-700 flex-shrink-0">Scene:</span>
           <div className="flex gap-2 flex-wrap">
             {sceneData.map((scene, index) => (
               <button
@@ -179,8 +178,8 @@ const ImageWidget = () => {
 
       {/* Version Selection */}
       <div>
-        <div className="flex items-center gap-4 flex-wrap">
-          <span className="text-sm font-medium text-slate-700 whitespace-nowrap">Version:</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-slate-700 flex-shrink-0">Version:</span>
           <div className="flex gap-2 flex-wrap">
             {currentScene.versions.map((version, index) => (
               <button
@@ -198,11 +197,6 @@ const ImageWidget = () => {
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Current Selection Info */}
-      <div className="mt-4 text-center text-sm text-slate-500">
-        Currently viewing: <span className="font-medium">{currentScene.name}</span> • <span className="font-medium">{currentImage.name}</span>
       </div>
     </div>
   );
