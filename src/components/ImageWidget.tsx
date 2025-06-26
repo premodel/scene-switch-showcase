@@ -135,13 +135,13 @@ const ImageWidget = () => {
       {/* Scene Selection */}
       <div className="mb-6">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-slate-700 px-4 py-2">Scene:</span>
+          <span className="text-sm font-medium text-slate-700 px-3 py-1.5">Scene:</span>
           {sceneData.map((scene, index) => (
             <button
               key={scene.id}
               onClick={() => handleSceneChange(index)}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105",
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105",
                 selectedSceneIndex === index
                   ? "text-white shadow-md"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
@@ -178,13 +178,13 @@ const ImageWidget = () => {
       {/* Version Selection */}
       <div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-slate-700 px-4 py-2">Version:</span>
+          <span className="text-sm font-medium text-slate-700 px-3 py-1.5">Version:</span>
           {currentScene.versions.map((version, index) => (
             <button
               key={version.id}
               onClick={() => handleVersionChange(index)}
               className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105",
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105",
                 selectedVersionIndex === index
                   ? "text-white shadow-md"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
