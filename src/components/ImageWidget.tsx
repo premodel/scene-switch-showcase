@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { fetchGoogleDriveFiles, getImageUrl } from '../services/googleDriveService';
+import { fetchCloudStorageFiles, getCloudStorageImageUrl } from '../services/googleCloudStorageService';
 import { parseFileName, groupScenesAndVersions, SceneData, ParsedScene } from '../utils/sceneParser';
 
 const ImageWidget = () => {
@@ -14,22 +13,18 @@ const ImageWidget = () => {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const folderId = searchParams.get('folderId');
+  // Default to your bucket and folder
+  const bucketName = 'premodel-assets';
+  const folderPath = 'af-2nd-floor';
 
   useEffect(() => {
-    const loadImagesFromDrive = async () => {
-      if (!folderId) {
-        setError('No Google Drive folder ID provided. Add ?folderId=YOUR_FOLDER_ID to the URL');
-        setIsDataLoading(false);
-        return;
-      }
-
+    const loadImagesFromCloudStorage = async () => {
       try {
         setIsDataLoading(true);
         setError(null);
         
-        console.log('Loading images from Google Drive folder:', folderId);
-        const files = await fetchGoogleDriveFiles(folderId);
+        console.log('Loading images from Cloud Storage bucket:', bucketName, 'folder:', folderPath);
+        const files = await fetchCloudStorageFiles(bucketName, folderPath);
         console.log('Retrieved files:', files);
         
         const imageFiles = files.filter(file => {
@@ -46,7 +41,7 @@ const ImageWidget = () => {
             const parsed = parseFileName(file.name);
             console.log(`Parse result for "${file.name}":`, parsed);
             if (parsed) {
-              parsed.imageUrl = getImageUrl(file);
+              parsed.imageUrl = getCloudStorageImageUrl(file);
               console.log(`Set image URL for "${file.name}":`, parsed.imageUrl);
             }
             return parsed;
@@ -76,8 +71,8 @@ const ImageWidget = () => {
       }
     };
 
-    loadImagesFromDrive();
-  }, [folderId]);
+    loadImagesFromCloudStorage();
+  }, []);
 
   const handleSceneChange = (sceneIndex: number) => {
     if (sceneIndex !== selectedSceneIndex) {
@@ -102,7 +97,7 @@ const ImageWidget = () => {
     return (
       <div className="w-full max-w-4xl mx-auto p-8 text-center">
         <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-slate-600">Loading images from Google Drive...</p>
+        <p className="text-slate-600">Loading images from Cloud Storage...</p>
       </div>
     );
   }
