@@ -20,18 +20,18 @@ export const parseFileName = (fileName: string): ParsedScene | null => {
   // Remove file extension
   const nameWithoutExt = fileName.replace(/\.(png|jpg|jpeg|webp)$/i, '');
   
-  // Split by dash to get scene and version
-  const parts = nameWithoutExt.split('-');
+  // Split by underscore to get scene and version
+  const parts = nameWithoutExt.split('_');
   if (parts.length !== 2) {
-    console.warn(`Invalid filename format: ${fileName}. Expected format: scene_name-version_name.ext`);
+    console.warn(`Invalid filename format: ${fileName}. Expected format: scene_name_version_name.ext`);
     return null;
   }
   
   const [scenePart, versionPart] = parts;
   
-  // Convert underscores to spaces for display names
-  const sceneName = scenePart.replace(/_/g, ' ');
-  const versionName = versionPart.replace(/_/g, ' ');
+  // Convert dashes to spaces for display names
+  const sceneName = scenePart.replace(/-/g, ' ');
+  const versionName = versionPart.replace(/-/g, ' ');
   
   return {
     sceneName,
