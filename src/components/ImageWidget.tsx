@@ -12,6 +12,7 @@ const ImageWidget = () => {
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
 
   // Get folder from URL parameters - now required
   const bucketName = 'premodel-assets';
@@ -58,7 +59,7 @@ const ImageWidget = () => {
         
         if (parsedFiles.length === 0) {
           console.log('No parsed files found. Original files:', files.map(f => f.name));
-          setError('No valid scene files found. Make sure your images follow the naming format: scene_name_version_name.jpg');
+          setError('No valid scene files found. Make sure your images follow the naming format: order_scene_name_version_name.jpg');
           setIsDataLoading(false);
           return;
         }
@@ -95,8 +96,16 @@ const ImageWidget = () => {
     }
   };
 
-  const handleImageLoad = () => {
+  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
     setIsImageLoading(false);
+    
+    // Set aspect ratio from the first image loaded
+    if (imageAspectRatio === null) {
+      const img = event.currentTarget;
+      const ratio = img.naturalWidth / img.naturalHeight;
+      setImageAspectRatio(ratio);
+      console.log('Set image aspect ratio:', ratio);
+    }
   };
 
   if (isDataLoading) {
@@ -156,7 +165,12 @@ const ImageWidget = () => {
 
       {/* Image Display */}
       <div className="relative mb-6 bg-slate-100 rounded-xl overflow-hidden">
-        <div className="aspect-[4/3] relative">
+        <div 
+          className="relative"
+          style={{ 
+            aspectRatio: imageAspectRatio ? imageAspectRatio.toString() : '4/3' 
+          }}
+        >
           {isImageLoading && (
             <div className="absolute inset-0 bg-slate-200 animate-pulse flex items-center justify-center z-10">
               <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
